@@ -27,21 +27,27 @@ import random
 directions = [(-1, 1)
              ,( 0, 1)
              ,( 1, 1)
-             ,(-1, 0)
-             # no 0,0
              ,( 1, 0)
-             ,(-1,-1)
-             ,( 0,-1)
              ,( 1,-1)
+             ,( 0,-1)
+             ,(-1,-1)
+             ,(-1, 0)
              ]
 
-def walk(x,y,l,L,im):
-    if im[x,y] != -1:
-        return
+def walk(x,y,d,l,L,im):
     W,H = im.shape
-    im[x,y] = l
-    dx,dy = random.choice(directions)
-    return walk((x+dx)%W, (y+dy)%H, (l+1)%L, L, im)
+    if random.random() < 0.1:
+        random.shuffle(directions)
+    for i in range(8):
+        dx,dy = directions[(d+i)%8]
+        x2 = (x+dx)%W
+        y2 = (y+dy)%H
+        if im[x2,y2] != -1:
+            continue
+        else:
+            im[x2,y2] = l
+            return walk(x2, y2, (d+i)%8, (l+1)%L, L, im)
+    return
 
 def allset(im):
     return np.where(im==-1)[0].size == 0
@@ -53,7 +59,9 @@ def gen_blocks(W,H,L):
         x = unset[0][0]
         y = unset[1][0]
         l = random.randrange(L)
-        walk(x,y,l,L,im)
+        d = random.randrange(8)
+        im[x,y] = l
+        walk(x,y,d,(l+1)%L,L,im)
     return im
 
 def thresh(im,thresh):
