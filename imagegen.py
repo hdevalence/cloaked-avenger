@@ -83,16 +83,16 @@ def fillpalette(shape,l,palette):
     Fills blocks according to a palette.
     palette -- array of uint8 3-tuples.
     """
-    w,h = shape
-    b = np.zeros((w,h,3),dtype=np.uint8)
+    h,w = shape
+    b = np.zeros((h,w,3),dtype=np.uint8)
     b[:,:,:] = palette[l]
     return b
 
 def expandimage(small,large,palette,S,fill):
-    smW,smH = small.shape
-    W,H = S*smW, S*smH
-    xints = zip(zip(range(0,W,S),range(S,W+S,S)),range(W))
-    yints = zip(zip(range(0,H,S),range(S,H+S,S)),range(H))
+    smH,smW = small.shape
+    H,W = S*smH, S*smW
+    xints = zip(zip(range(0,H,S),range(S,H+S,S)),range(H))
+    yints = zip(zip(range(0,W,S),range(S,W+S,S)),range(W))
     blocks = product(xints,yints)
     for ((a,b),x),((c,d),y) in blocks:
         large[a:b,c:d] = fill((S,S), small[x,y], palette)
@@ -114,15 +114,15 @@ if __name__ == "__main__":
     outname = arguments['OUTPUT']
     if '-P' in arguments:
         palette = loadpalette(arguments['-P'])
-        expanded = np.zeros((S*W,S*H,3),dtype=np.uint8)
+        expanded = np.zeros((S*H,S*W,3),dtype=np.uint8)
         fill = fillpalette
         L = palette.shape[0]
     else: # black and white
         L = int(arguments['-L'])
         palette = L
-        expanded = np.zeros((S*W,S*H),dtype=np.uint8)
+        expanded = np.zeros((S*H,S*W),dtype=np.uint8)
         fill = fillnoise
-    small = gen_blocks(W,H,L)
+    small = gen_blocks(H,W,L)
     large = expandimage(small,expanded,palette,S,fill)
     output = Image.fromarray(large)
     output.save(outname)
