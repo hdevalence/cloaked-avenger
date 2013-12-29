@@ -82,12 +82,12 @@ def thresh(im, thresh):
     thigh = threshold(tlow, threshmax=thresh, newval=255)
     return thigh.astype(np.uint8)
 
-def fillnoise(shape, l, palette):
+def fillnoise(shape, l, L):
     """
     Fills blocks with binary noise.
-    palette -- integer representing number of levels.
+    L -- integer representing number of levels.
     """
-    prob = float(l+1)/(palette+1)
+    prob = float(l+1)/(L+1)
     return thresh(np.random.sample(shape), prob)
 
 def fillpalette(shape, l, palette):
@@ -100,12 +100,11 @@ def fillpalette(shape, l, palette):
     b[:, :, :] = palette[l]
     return b
 
-def expandimage(small, large, palette, S, fill):
+def expandimage(small, large, S, fill):
     """
     Expands small image into coloured blocks.
     small   -- the small image
     large   -- the large image
-    palette -- colour palette passed to fill
     S       -- size of blocks.
     fill    -- function to create blocks.
     """
@@ -114,7 +113,7 @@ def expandimage(small, large, palette, S, fill):
     yints = zip(zip(range(0, W, S), range(S, W+S, S)), range(W))
     blocks = product(xints, yints)
     for ((a, b), x), ((c, d), y) in blocks:
-        large[a:b, c:d] = fill((S, S), small[x, y], palette)
+        large[a:b, c:d] = fill((S, S), small[x, y])
     return large
 
 def loadpalette(fname):
@@ -139,15 +138,16 @@ if __name__ == "__main__":
     if '-P' in arguments:
         palette = loadpalette(arguments['-P'])
         expanded = np.zeros((S*H, S*W, 3), dtype=np.uint8)
-        fill = fillpalette
+        def fill(shape, val):
+            return fillpalette(shape, val, palette)
         L = palette.shape[0]
     else: # black and white
         L = int(arguments['-L'])
-        palette = L
+        def fill(shape, val):
+            return fillnoise(shape, val, L)
         expanded = np.zeros((S*H, S*W), dtype=np.uint8)
-        fill = fillnoise
     small = gen_blocks(H, W, L)
-    large = expandimage(small, expanded, palette, S, fill)
+    large = expandimage(small, expanded, S, fill)
     output = Image.fromarray(large)
     output.save(outname)
 
