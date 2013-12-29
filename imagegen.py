@@ -3,13 +3,14 @@
 """Creates some random images.
 
 Usage:
-    imagegen.py -W w -H h -S s (-L l | -P palette) OUTPUT
+    imagegen.py -W w -H h [-S s] [-D d] (-L l | -P palette) OUTPUT
     imagegen.py --help
 
 Options:
     -W w        Width in blocks
     -H h        Height in blocks
-    -S s        Scale (px per block)
+    -S s        Scale, px per block [default: 32]
+    -D d        Directionality: 0-1, 1 fully random [default: 0.1]
     -L l        Number of levels (greyscale noise)
     -P palette  Palette file (colour output)
     --help      Show this screen
@@ -35,9 +36,11 @@ directions = [(-1, 1)
              ,(-1, 0)
              ]
 
+directionality = 0.1
+
 def walk(x,y,d,l,L,im):
     W,H = im.shape
-    if random.random() < 0.1:
+    if random.random() < directionality:
         random.shuffle(directions)
     for i in range(8):
         dx,dy = directions[(d+i)%8]
@@ -111,6 +114,7 @@ if __name__ == "__main__":
     W = int(arguments['-W'])
     H = int(arguments['-H'])
     S = int(arguments['-S'])
+    directionality = float(arguments['-D'])
     outname = arguments['OUTPUT']
     if '-P' in arguments:
         palette = loadpalette(arguments['-P'])
