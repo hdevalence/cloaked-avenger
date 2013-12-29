@@ -26,32 +26,31 @@ from itertools import product
 from scipy.stats import threshold
 import random
 
-directions = [ (-1,  1)
-             , ( 0,  1)
-             , ( 1,  1)
-             , ( 1,  0)
-             , ( 1, -1)
-             , ( 0, -1)
-             , (-1, -1)
-             , (-1,  0)
-             ]
+class Directions(object):
+    """
+    Wrapper around a list of directions that
+    can cyclically rotate their order.
+    """
+    _dirs = [ (-1,  1)
+            , ( 0,  1)
+            , ( 1,  1)
+            , ( 1,  0)
+            , ( 1, -1)
+            , ( 0, -1)
+            , (-1, -1)
+            , (-1,  0)
+            ]
+    def __init__(self, directionality):
+        self._directionality = directionality
+        self._dir_offset = 0
+        self.change_direction()
 
-directionality = 0.1
+    def d(self, i):
+        return self._dirs[(i + self._dir_offset) % 8]
 
-def walk(x, y, d, l, L, im):
-    W, H = im.shape
-    if random.random() < directionality:
-        random.shuffle(directions)
-    for i in range(8):
-        dx, dy = directions[(d+i)%8]
-        x2 = (x+dx)%W
-        y2 = (y+dy)%H
-        if im[x2, y2] != -1:
-            continue
-        else:
-            im[x2, y2] = l
-            return walk(x2, y2, (d+i)%8, (l+1)%L, L, im)
-    return
+    def change_direction(self):
+        if random.random() < self._directionality:
+            self._dir_offset = random.randrange(8)
 
 def allset(im):
     """
@@ -59,20 +58,36 @@ def allset(im):
     """
     return np.where(im==-1)[0].size == 0
 
-def gen_blocks(W, H, L):
+def seek(x, y, im, directions):
+    directions.change_direction()
+    width, height = im.shape
+    for i in range(8):
+        dx, dy = directions.d(i)
+        x2 = (x + dx) % width
+        y2 = (y + dy) % height
+        if im[x2, y2] == -1:
+            return (x2, y2)
+    return None
+
+def gen_blocks(width, height, num_levels, directionality):
     """
     Generate an image according to a random algorithm.
     """
-    im = -np.ones((W, H), dtype=np.int)
+    im = -np.ones((width, height), dtype=np.int)
     while not allset(im):
         unset = np.where(im==-1)
-        x = unset[0][0]
-        y = unset[1][0]
-        l = random.randrange(L)
-        d = random.randrange(8)
-        im[x, y] = l
-        walk(x, y, d, (l+1)%L, L, im)
-    return im
+        x, y = unset[0][0], unset[1][0]
+        level = random.randrange(num_levels)
+        dirs = Directions(directionality)
+        while True:
+            im[x, y] = level
+            next_pos = seek(x, y, im, dirs)
+            if not next_pos:
+                break # Hit a dead end
+            else:
+                x, y = next_pos
+                level = (level + 1) % num_levels
+    return im.transpose() # numpy rowmajor, PIL columnmajor
 
 def thresh(im, thresh):
     """
@@ -146,7 +161,7 @@ if __name__ == "__main__":
         def fill(shape, val):
             return fillnoise(shape, val, L)
         expanded = np.zeros((S*H, S*W), dtype=np.uint8)
-    small = gen_blocks(H, W, L)
+    small = gen_blocks(W, H, L, directionality)
     large = expandimage(small, expanded, S, fill)
     output = Image.fromarray(large)
     output.save(outname)
