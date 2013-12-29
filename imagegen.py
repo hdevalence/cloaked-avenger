@@ -125,7 +125,7 @@ def loadpalette(fname):
         lines = f.readlines()
         palette = np.zeros((len(lines), 3), dtype=np.uint8)
         for i, line in enumerate(lines):
-            palette[i] = list(map(int, line.split(',')))
+            palette[i] = [int(x) for x in line.split(',')]
     return palette
 
 if __name__ == "__main__":
