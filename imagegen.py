@@ -59,6 +59,9 @@ def allset(im):
     return np.where(im==-1)[0].size == 0
 
 def seek(x, y, im, directions):
+    """
+    Seeks a new location from (x, y) which is unset in im.
+    """
     directions.change_direction()
     width, height = im.shape
     for i in range(8):
