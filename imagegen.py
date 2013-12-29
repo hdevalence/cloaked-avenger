@@ -100,22 +100,20 @@ def thresh(im, thresh):
     thigh = threshold(tlow, threshmax=thresh, newval=255)
     return thigh.astype(np.uint8)
 
-def fillnoise(shape, l, L):
+def fillnoise(shape, level, max_levels):
     """
     Fills blocks with binary noise.
-    L -- integer representing number of levels.
     """
-    prob = float(l+1)/(L+1)
+    prob = float(level+1)/(max_levels+1)
     return thresh(np.random.sample(shape), prob)
 
-def fillpalette(shape, l, palette):
+def fillpalette(shape, level, palette):
     """
     Fills blocks according to a palette.
     palette -- array of uint8 3-tuples.
     """
-    h, w = shape
-    b = np.zeros((h, w, 3), dtype=np.uint8)
-    b[:, :, :] = palette[l]
+    b = np.zeros((shape[0], shape[1], 3), dtype=np.uint8)
+    b[:, :, :] = palette[level]
     return b
 
 def expandimage(small, large, S, fill):
@@ -139,8 +137,8 @@ def loadpalette(fname):
     Load a palette file.
     Format is R,G,B integers, one per line.
     """
-    with open(fname, 'r') as f:
-        lines = f.readlines()
+    with open(fname, 'r') as inputfile:
+        lines = inputfile.readlines()
         palette = np.zeros((len(lines), 3), dtype=np.uint8)
         for i, line in enumerate(lines):
             palette[i] = [int(x) for x in line.split(',')]
@@ -148,24 +146,28 @@ def loadpalette(fname):
 
 if __name__ == "__main__":
     arguments = docopt(__doc__)
-    W = int(arguments['-W'])
-    H = int(arguments['-H'])
-    S = int(arguments['-S'])
+    width = int(arguments['-W'])
+    height = int(arguments['-H'])
+    blocksize = int(arguments['-S'])
     directionality = float(arguments['-D'])
     outname = arguments['OUTPUT']
     if '-P' in arguments:
+        # Load colour palette from file
         palette = loadpalette(arguments['-P'])
-        expanded = np.zeros((S*H, S*W, 3), dtype=np.uint8)
+        expanded = np.zeros((blocksize*height, blocksize*width, 3),
+                            dtype=np.uint8)
         def fill(shape, val):
             return fillpalette(shape, val, palette)
-        L = palette.shape[0]
-    else: # black and white
-        L = int(arguments['-L'])
+        num_levels = palette.shape[0]
+    else:
+        # black and white, use fillnoise
+        num_levels = int(arguments['-L'])
         def fill(shape, val):
-            return fillnoise(shape, val, L)
-        expanded = np.zeros((S*H, S*W), dtype=np.uint8)
-    small = gen_blocks(W, H, L, directionality)
-    large = expandimage(small, expanded, S, fill)
+            return fillnoise(shape, val, num_levels)
+        expanded = np.zeros((blocksize*height, blocksize*width),
+                            dtype=np.uint8)
+    small = gen_blocks(width, height, num_levels, directionality)
+    large = expandimage(small, expanded, blocksize, fill)
     output = Image.fromarray(large)
     output.save(outname)
 
