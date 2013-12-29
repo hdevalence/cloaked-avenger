@@ -54,9 +54,15 @@ def walk(x, y, d, l, L, im):
     return
 
 def allset(im):
+    """
+    Return true if im has no -1 values.
+    """
     return np.where(im==-1)[0].size == 0
 
 def gen_blocks(W, H, L):
+    """
+    Generate an image according to a random algorithm.
+    """
     im = -np.ones((W, H), dtype=np.int)
     while not allset(im):
         unset = np.where(im==-1)
@@ -69,6 +75,9 @@ def gen_blocks(W, H, L):
     return im
 
 def thresh(im, thresh):
+    """
+    Threshold image with threshdold value thresh
+    """
     tlow = threshold(im, threshmin=thresh, newval=0)
     thigh = threshold(tlow, threshmax=thresh, newval=255)
     return thigh.astype(np.uint8)
@@ -92,8 +101,15 @@ def fillpalette(shape, l, palette):
     return b
 
 def expandimage(small, large, palette, S, fill):
-    smH, smW = small.shape
-    H, W = S*smH, S*smW
+    """
+    Expands small image into coloured blocks.
+    small   -- the small image
+    large   -- the large image
+    palette -- colour palette passed to fill
+    S       -- size of blocks.
+    fill    -- function to create blocks.
+    """
+    H, W = S*small.shape[0], S*small.shape[1]
     xints = zip(zip(range(0, H, S), range(S, H+S, S)), range(H))
     yints = zip(zip(range(0, W, S), range(S, W+S, S)), range(W))
     blocks = product(xints, yints)
@@ -102,6 +118,10 @@ def expandimage(small, large, palette, S, fill):
     return large
 
 def loadpalette(fname):
+    """
+    Load a palette file.
+    Format is R,G,B integers, one per line.
+    """
     with open(fname, 'r') as f:
         lines = f.readlines()
         palette = np.zeros((len(lines), 3), dtype=np.uint8)
