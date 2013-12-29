@@ -3,14 +3,15 @@
 """Creates some random images.
 
 Usage:
-    imagegen.py -W w -H h -S s -L l OUTPUT
+    imagegen.py -W w -H h -S s (-L l | -P palette) OUTPUT
     imagegen.py --help
 
 Options:
     -W w        Width in blocks
     -H h        Height in blocks
     -S s        Scale (px per block)
-    -L l        Number of levels.
+    -L l        Number of levels (greyscale noise)
+    -P palette  Palette file (colour output)
     --help      Show this screen
 
 (C) 2013 Henry de Valence <hdevalence@hdevalence.ca>
@@ -69,30 +70,60 @@ def thresh(im,thresh):
     thigh = threshold(tlow,threshmax=thresh,newval=255)
     return thigh.astype(np.uint8)
 
-def fillblock(shape,l,L):
-    prob = float(l+1)/(L+1)
+def fillnoise(shape,l,palette):
+    """
+    Fills blocks with binary noise.
+    palette -- integer representing number of levels.
+    """
+    prob = float(l+1)/(palette+1)
     return thresh(np.random.sample(shape),prob)
 
-def expandimage(small,L,S):
+def fillpalette(shape,l,palette):
+    """
+    Fills blocks according to a palette.
+    palette -- array of uint8 3-tuples.
+    """
+    w,h = shape
+    b = np.zeros((w,h,3),dtype=np.uint8)
+    b[:,:,:] = palette[l]
+    return b
+
+def expandimage(small,large,palette,S,fill):
     smW,smH = small.shape
     W,H = S*smW, S*smH
-    im = np.zeros((W,H),np.uint8)
     xints = zip(zip(range(0,W,S),range(S,W+S,S)),range(W))
     yints = zip(zip(range(0,H,S),range(S,H+S,S)),range(H))
     blocks = product(xints,yints)
     for ((a,b),x),((c,d),y) in blocks:
-        im[a:b,c:d] = fillblock((S,S), small[x,y], L)
-    return im
+        large[a:b,c:d] = fill((S,S), small[x,y], palette)
+    return large
+
+def loadpalette(fname):
+    with open(fname,'r') as f:
+        lines = f.readlines()
+        palette = np.zeros((len(lines),3),dtype=np.uint8)
+        for i,line in enumerate(lines):
+            palette[i] = list(map(int,line.split(',')))
+    return palette
 
 if __name__ == "__main__":
     arguments = docopt(__doc__)
     W = int(arguments['-W'])
     H = int(arguments['-H'])
     S = int(arguments['-S'])
-    L = int(arguments['-L'])
     outname = arguments['OUTPUT']
-    blocks = gen_blocks(W,H,L)
-    expanded = expandimage(blocks,L,S)
-    output = Image.fromarray(expanded)
+    if '-P' in arguments:
+        palette = loadpalette(arguments['-P'])
+        expanded = np.zeros((S*W,S*H,3),dtype=np.uint8)
+        fill = fillpalette
+        L = palette.shape[0]
+    else: # black and white
+        L = int(arguments['-L'])
+        palette = L
+        expanded = np.zeros((S*W,S*H),dtype=np.uint8)
+        fill = fillnoise
+    small = gen_blocks(W,H,L)
+    large = expandimage(small,expanded,palette,S,fill)
+    output = Image.fromarray(large)
     output.save(outname)
 
